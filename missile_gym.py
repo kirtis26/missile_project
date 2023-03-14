@@ -1,6 +1,6 @@
 import numpy as np
 from missile import Missile
-from target import Target
+from target import Target, Target2D
 from interpolation import Interp1d
 from math import *
 
@@ -26,7 +26,33 @@ class MissileGym(object):
         mparams = missile.get_parameters_of_missile_to_meeting_target(target.pos, target.vel, missile_vel_abs, missile_pos)
         missile.set_init_cond(parameters_of_missile=mparams)
         return cls(missile=missile, target=target, t_max=missile_opts.get('t_max'), tau=missile_opts.get('tau', 1/30))
-
+    
+    @classmethod
+    def make_simple_scenario_2D(cls, missile_opts, target_opts,
+                             tau=0.1,
+#                              ndt=10,
+#                              n_step=100,
+                             t_max=25,
+                             fly_time_min=False,
+                             postProcessing=True):
+        """
+        Классовый метод создания простого сценария движения цели, в котором происходит инициилизация
+        объектов Missile и Target, начальных параметров наведения ракеты на цель.
+        arguments: missile_opts {dict} -- словарь с опциями ракеты
+                   target_pos {tuple/list/np.ndarray} -- положение цели
+                   target_vel {tuple/np.ndarray} -- скорость цели
+        returns: {cls}
+        """
+        target = Target2D.get_simple_target(target_opts,
+                                         time_min=fly_time_min,
+                                         postProcessing=postProcessing)
+        missile_vel_abs = missile_opts['vel_abs']
+        missile_pos = missile_opts['init_conditions'].get('pos_0', None)
+        missile = Missile.get_missile(missile_opts)
+        mparams = missile.get_parameters_of_missile_to_meeting_target(target.pos, target.vel, missile_vel_abs, missile_pos)
+        missile.set_init_cond(parameters_of_missile=mparams)
+        return cls(missile=missile, target=target, t_max=t_max, tau=missile_opts.get('tau', 1/10))
+    
     def __init__(self, *args, **kwargs):
         self.point_solution = np.array([])
         self.missile = kwargs['missile']
@@ -103,7 +129,7 @@ class MissileGym(object):
             info['done_reason'] = 'a long time to fly'
             info['t'] = self.missile.t
             return True, info
-        if self.missile.t > 20 and self.missile.v < 1000:
+        if self.missile.t > 20 and self.missile.v < 350:
             info['done_reason'] = 'velocity is small'
             info['t'] = self.missile.t
             return True, info
